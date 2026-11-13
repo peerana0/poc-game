@@ -25,13 +25,18 @@ POC เกม MOBA 3 ทีม ทีมละ 5 คน สร้างด้ว
 
 ต้องมี Xcode (ฟรีจาก App Store) และ Apple ID
 
-1. ใน Godot: Editor > Manage Export Templates > Download and Install (ครั้งเดียว)
-2. Project > Export > เลือก preset "iOS"
-   - ใส่ App Store Team ID (ดูได้ใน Xcode > Settings > Accounts)
+1. ใน Godot: Editor > Manage Export Templates ถ้าขึ้นว่า Offline mode ให้กด Go Online ก่อน
+   แล้วเลือกที่ดาวน์โหลดในช่อง Download from ติ๊ก iOS แล้วกด Install Selected Templates (ครั้งเดียว)
+2. เปิด Xcode ครั้งแรกให้ติดตั้ง iOS ให้เสร็จ แล้วไปที่ Xcode > Settings > Accounts กด + ใส่ Apple ID
+3. หา Team ID: ใน Accounts กด Manage Certificates กด + เลือก Apple Development
+   แล้วเปิดแอป Keychain Access ค้น "Apple Development" ดับเบิลคลิก ช่อง Organizational Unit คือ Team ID
+4. Project > Export > เลือก preset "iOS"
+   - ใส่ App Store Team ID
    - เปลี่ยน Bundle Identifier ให้ไม่ซ้ำ เช่น `com.<ชื่อคุณ>.tricorearena`
-3. กด Export Project เลือกโฟลเดอร์ `build/ios` (ติ๊ก Export With Debug)
-4. เปิดไฟล์ `.xcodeproj` ที่ได้ใน Xcode เสียบสาย iPhone แล้วกด Run
-5. บน iPhone: Settings > Privacy & Security > Developer Mode เปิดไว้
+   - preset ตั้ง Export Project Only ไว้แล้ว (Godot จะสร้างโปรเจกต์ Xcode ให้ ไม่สร้าง .ipa เอง)
+5. กด Export Project เลือกโฟลเดอร์ `build/ios` (ติ๊ก Export With Debug)
+6. เปิดไฟล์ `.xcodeproj` ที่ได้ใน Xcode เสียบสาย iPhone เลือกเครื่องที่แถบด้านบน แล้วกด Run
+7. บน iPhone: Settings > Privacy & Security > Developer Mode เปิดไว้
    และครั้งแรกต้องไปที่ Settings > General > VPN & Device Management กดเชื่อถือแอป
 
 Apple ID ฟรีใช้ได้ แต่แอปจะหมดอายุใน 7 วัน ต้องกด Run จาก Xcode ใหม่
