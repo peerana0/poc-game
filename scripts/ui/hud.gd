@@ -7,7 +7,7 @@ extends CanvasLayer
 const SIDE_MARGIN := 70.0
 
 var hero: Hero
-var joystick: VirtualJoystick
+var joystick: TouchJoystick
 var attack_button: SkillButton
 var skill_buttons: Array[SkillButton] = []
 var health_bars: HealthBars
@@ -34,7 +34,7 @@ func setup(p_hero: Hero, camera: MobaCamera) -> void:
 	health_bars.local_hero = hero
 	_root.add_child(health_bars)
 
-	joystick = VirtualJoystick.new()
+	joystick = TouchJoystick.new()
 	_place(joystick, Vector2(0.0, 1.0), Vector2(SIDE_MARGIN - 30.0, -470.0), Vector2(540.0, 450.0))
 	_root.add_child(joystick)
 

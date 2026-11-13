@@ -49,12 +49,12 @@ func _physics_process(delta: float) -> void:
 
 func _damage_tick() -> void:
 	var half := skill.wall_length * 0.5
-	var to_local := global_transform.affine_inverse()
+	var world_to_wall := global_transform.affine_inverse()
 	for node in get_tree().get_nodes_in_group("units"):
 		var unit := node as Unit
 		if unit == null or not unit.is_alive() or not hero.is_enemy_of(unit):
 			continue
-		var local := to_local * unit.global_position
+		var local := world_to_wall * unit.global_position
 		if absf(local.x) <= half + unit.body_radius and absf(local.z) <= 0.6 + unit.body_radius:
 			unit.take_damage(skill.tick_damage, hero, "skill")
 			unit.apply_slow(skill.slow_multiplier, skill.tick_interval + 0.2)

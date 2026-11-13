@@ -1,6 +1,7 @@
-class_name VirtualJoystick
+class_name TouchJoystick
 extends Control
 ## Floating thumbstick: put a thumb anywhere in this area and drag to move.
+## (Not "VirtualJoystick": Godot 4.7 ships a built-in node with that name.)
 ## Handles its own touch index so it works alongside the skill buttons.
 
 signal changed(value: Vector2)
