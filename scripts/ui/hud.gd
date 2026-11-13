@@ -18,10 +18,18 @@ var _hero_panel: HeroPanel
 var _fps_label: Label
 var _fps_timer := 0.0
 var _hint: Label
+var _rules: MatchRules
+var _minimap: Minimap
+var _score: ScoreBoard
+var _respawn_label: Label
+var _end_panel: Control
 
 
-func setup(p_hero: Hero, camera: MobaCamera) -> void:
+## Without rules this is the skill test HUD (fast cooldown toggle);
+## with rules it adds the minimap, score, respawn timer and end screen.
+func setup(p_hero: Hero, camera: MobaCamera, rules: MatchRules = null) -> void:
 	hero = p_hero
+	_rules = rules
 	_root = Control.new()
 	_root.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_root.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -55,29 +63,50 @@ func setup(p_hero: Hero, camera: MobaCamera) -> void:
 	_cancel_zone.visible = false
 	_root.add_child(_cancel_zone)
 
+	var panel_left := SIDE_MARGIN - 20.0
+	if _rules != null:
+		_minimap = Minimap.new()
+		_minimap.local_hero = hero
+		_place(_minimap, Vector2(0.0, 0.0), Vector2(SIDE_MARGIN - 20.0, 12.0), Vector2(210.0, 210.0))
+		_root.add_child(_minimap)
+		panel_left = SIDE_MARGIN + 200.0
+
 	_hero_panel = HeroPanel.new()
 	_hero_panel.hero = hero
-	_place(_hero_panel, Vector2(0.0, 0.0), Vector2(SIDE_MARGIN - 20.0, 14.0), Vector2(360.0, 86.0))
+	_place(_hero_panel, Vector2(0.0, 0.0), Vector2(panel_left, 14.0), Vector2(360.0, 86.0))
 	_root.add_child(_hero_panel)
 
 	_fps_label = _make_label(18, HORIZONTAL_ALIGNMENT_RIGHT)
 	_place(_fps_label, Vector2(1.0, 0.0), Vector2(right - 220.0, 12.0), Vector2(220.0, 30.0))
 	_root.add_child(_fps_label)
 
-	var cooldown_toggle := Button.new()
-	cooldown_toggle.toggle_mode = true
-	cooldown_toggle.button_pressed = true
-	cooldown_toggle.focus_mode = Control.FOCUS_NONE
-	cooldown_toggle.add_theme_font_size_override("font_size", 18)
-	_place(cooldown_toggle, Vector2(1.0, 0.0), Vector2(right - 250.0, 46.0), Vector2(250.0, 46.0))
-	_root.add_child(cooldown_toggle)
-	cooldown_toggle.toggled.connect(func(on: bool) -> void: _set_fast_cooldowns(cooldown_toggle, on))
-	_set_fast_cooldowns(cooldown_toggle, true)
-
 	_hint = _make_label(20, HORIZONTAL_ALIGNMENT_CENTER)
-	_hint.text = "ลองสกิลกับหุ่นซ้อม: แตะเพื่อยิงอัตโนมัติ ลากเพื่อเล็ง"
 	_place(_hint, Vector2(0.5, 0.0), Vector2(-280.0, 108.0), Vector2(560.0, 32.0))
 	_root.add_child(_hint)
+
+	if _rules == null:
+		var cooldown_toggle := Button.new()
+		cooldown_toggle.toggle_mode = true
+		cooldown_toggle.button_pressed = true
+		cooldown_toggle.focus_mode = Control.FOCUS_NONE
+		cooldown_toggle.add_theme_font_size_override("font_size", 18)
+		_place(cooldown_toggle, Vector2(1.0, 0.0), Vector2(right - 250.0, 46.0), Vector2(250.0, 46.0))
+		_root.add_child(cooldown_toggle)
+		cooldown_toggle.toggled.connect(func(on: bool) -> void: _set_fast_cooldowns(cooldown_toggle, on))
+		_set_fast_cooldowns(cooldown_toggle, true)
+		_hint.text = "ลองสกิลกับหุ่นซ้อม: แตะเพื่อยิงอัตโนมัติ ลากเพื่อเล็ง"
+	else:
+		_score = ScoreBoard.new()
+		_score.rules = _rules
+		_place(_score, Vector2(0.5, 0.0), Vector2(-170.0, 10.0), Vector2(340.0, 44.0))
+		_root.add_child(_score)
+		_respawn_label = _make_label(34, HORIZONTAL_ALIGNMENT_CENTER)
+		_place(_respawn_label, Vector2(0.5, 0.5), Vector2(-300.0, -120.0), Vector2(600.0, 50.0))
+		_root.add_child(_respawn_label)
+		_hint.text = "ป้องกัน Core ของคุณ และทำลาย Core ของอีก 2 ทีม"
+		_rules.team_eliminated.connect(_on_team_eliminated)
+		_rules.match_over.connect(_on_match_over)
+
 	var tween := _hint.create_tween()
 	tween.tween_interval(6.0)
 	tween.tween_property(_hint, "modulate:a", 0.0, 1.0)
@@ -92,6 +121,13 @@ func _process(delta: float) -> void:
 		button.cooldown_ratio = skill.cooldown_ratio(hero.cooldown_scale)
 		button.cooldown_seconds = skill.cooldown_left
 		button.queue_redraw()
+	if _respawn_label != null:
+		if hero.is_alive():
+			_respawn_label.text = ""
+		elif hero.can_respawn and hero.respawn_left > 0.0:
+			_respawn_label.text = "เกิดใหม่ใน %d วินาที" % ceili(hero.respawn_left)
+		else:
+			_respawn_label.text = ""
 	_fps_timer -= delta
 	if _fps_timer <= 0.0:
 		_fps_timer = 0.5
@@ -115,6 +151,52 @@ func is_over_cancel(point: Vector2) -> bool:
 		return false
 	var rect := _cancel_zone.get_global_rect()
 	return rect.get_center().distance_to(point) <= rect.size.x * 0.5
+
+
+func _on_team_eliminated(team: int) -> void:
+	if team == hero.team:
+		_show_end("แพ้", "Core ของคุณถูกทำลาย", Color(1.0, 0.4, 0.35))
+	else:
+		_flash_hint("%s ถูกกำจัดแล้ว" % TeamPalette.team_name(team))
+
+
+func _on_match_over(winner: int) -> void:
+	if winner == hero.team:
+		_show_end("ชนะ!", "ทีมของคุณเป็นทีมสุดท้ายที่เหลืออยู่", Color(1.0, 0.85, 0.3))
+
+
+func _flash_hint(text: String) -> void:
+	_hint.text = text
+	_hint.modulate.a = 1.0
+	var tween := _hint.create_tween()
+	tween.tween_interval(3.0)
+	tween.tween_property(_hint, "modulate:a", 0.0, 1.0)
+
+
+func _show_end(title: String, subtitle: String, color: Color) -> void:
+	if _end_panel != null:
+		return
+	var dim := ColorRect.new()
+	dim.color = Color(0.0, 0.0, 0.0, 0.55)
+	_end_panel = dim
+	_end_panel.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_root.add_child(_end_panel)
+	var title_label := _make_label(96, HORIZONTAL_ALIGNMENT_CENTER)
+	title_label.text = title
+	title_label.add_theme_color_override("font_color", color)
+	_place(title_label, Vector2(0.5, 0.5), Vector2(-400.0, -170.0), Vector2(800.0, 120.0))
+	_end_panel.add_child(title_label)
+	var sub_label := _make_label(26, HORIZONTAL_ALIGNMENT_CENTER)
+	sub_label.text = subtitle
+	_place(sub_label, Vector2(0.5, 0.5), Vector2(-400.0, -40.0), Vector2(800.0, 40.0))
+	_end_panel.add_child(sub_label)
+	var again := Button.new()
+	again.text = "เล่นอีกครั้ง"
+	again.focus_mode = Control.FOCUS_NONE
+	again.add_theme_font_size_override("font_size", 28)
+	_place(again, Vector2(0.5, 0.5), Vector2(-130.0, 40.0), Vector2(260.0, 70.0))
+	_end_panel.add_child(again)
+	again.pressed.connect(func() -> void: get_tree().reload_current_scene())
 
 
 func _set_fast_cooldowns(button: Button, on: bool) -> void:
@@ -153,6 +235,33 @@ func _place(control: Control, anchor: Vector2, from_anchor: Vector2, control_siz
 	control.offset_top = from_anchor.y
 	control.offset_right = from_anchor.x + control_size.x
 	control.offset_bottom = from_anchor.y + control_size.y
+
+
+## Kill score of the three teams and the match clock.
+class ScoreBoard extends Control:
+	var rules: MatchRules
+
+	func _ready() -> void:
+		mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+	func _process(_delta: float) -> void:
+		queue_redraw()
+
+	func _draw() -> void:
+		if rules == null:
+			return
+		var font := get_theme_default_font()
+		draw_rect(Rect2(Vector2.ZERO, size), Color(0.03, 0.04, 0.08, 0.6))
+		var slot := size.x / 4.0
+		for team in 3:
+			var tint := TeamPalette.color(team)
+			if not rules.is_team_alive(team):
+				tint = tint.darkened(0.6)
+			var x := slot * float(team)
+			draw_rect(Rect2(Vector2(x + 8.0, 10.0), Vector2(8.0, size.y - 20.0)), tint)
+			draw_string(font, Vector2(x + 20.0, size.y * 0.5 + 10.0), str(rules.kills[team]), HORIZONTAL_ALIGNMENT_LEFT, slot - 24.0, 28, tint.lightened(0.3))
+		var seconds := int(rules.elapsed)
+		draw_string(font, Vector2(slot * 3.0, size.y * 0.5 + 8.0), "%d:%02d" % [seconds / 60, seconds % 60], HORIZONTAL_ALIGNMENT_CENTER, slot, 22)
 
 
 ## Drop zone for cancelling an aimed skill.

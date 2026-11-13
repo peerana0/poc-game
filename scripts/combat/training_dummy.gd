@@ -18,6 +18,8 @@ func _ready() -> void:
 		display_name = "หุ่นซ้อม"
 	bar_height = 2.4
 	super._ready()
+	# Solid like a structure, so the hero bumps into it.
+	collision_layer = 2
 	_model = _build_model()
 	add_child(_model)
 

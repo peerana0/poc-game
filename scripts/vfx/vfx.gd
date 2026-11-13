@@ -260,7 +260,7 @@ static func wall_flames(half_length: float) -> GPUParticles3D:
 
 
 ## Gives a projectile node a glowing core, a particle trail and a small light.
-static func dress_projectile(node: Node3D, color: Color, size: float = 1.0) -> void:
+static func dress_projectile(node: Node3D, color: Color, size: float = 1.0, with_light: bool = true) -> void:
 	var sphere := SphereMesh.new()
 	sphere.radius = 0.2 * size
 	sphere.height = 0.4 * size
@@ -275,6 +275,8 @@ static func dress_projectile(node: Node3D, color: Color, size: float = 1.0) -> v
 		"size": 0.8 * size, "colors": trail_colors(color),
 	})
 	node.add_child(trail)
+	if not with_light:
+		return
 	var light := OmniLight3D.new()
 	light.light_color = color
 	light.light_energy = 1.6

@@ -11,6 +11,7 @@ var camera: MobaCamera
 
 func _ready() -> void:
 	InputSetup.ensure_actions()
+	FloatingText.focus = null
 	_build_environment()
 	_build_ground()
 	_build_decor()

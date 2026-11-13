@@ -4,10 +4,11 @@ extends RefCounted
 ## Set HeroStats.model_scene to swap in a real rigged model later.
 
 
-static func build(hero_id: String, accent: Color) -> Node3D:
+## tint (when its alpha > 0) recolours the outfit, e.g. by team for bots.
+static func build(hero_id: String, accent: Color, tint: Color = Color(0.0, 0.0, 0.0, 0.0)) -> Node3D:
 	match hero_id:
 		"pyrelle":
-			return _pyrelle()
+			return _pyrelle(tint)
 		_:
 			return _generic(accent)
 
@@ -21,10 +22,11 @@ static func _generic(accent: Color) -> Node3D:
 
 
 ## Pyrelle, fire mage: crimson robe, wizard hat, burning hair and a staff with a fire orb.
-static func _pyrelle() -> Node3D:
+static func _pyrelle(tint: Color) -> Node3D:
 	var root := Node3D.new()
-	var robe := Vfx.surface_material(Color(0.62, 0.09, 0.1))
-	var robe_dark := Vfx.surface_material(Color(0.32, 0.04, 0.06))
+	var robe_color := Color(0.62, 0.09, 0.1) if tint.a <= 0.0 else tint.darkened(0.3)
+	var robe := Vfx.surface_material(robe_color)
+	var robe_dark := Vfx.surface_material(robe_color.darkened(0.5))
 	var gold := Vfx.surface_material(Color(1.0, 0.76, 0.3), 0.35, 0.5)
 	gold.metallic = 0.8
 	var skin := Vfx.surface_material(Color(0.98, 0.82, 0.7), 0.8, 0.25)

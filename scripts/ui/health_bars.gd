@@ -34,8 +34,17 @@ func _draw() -> void:
 			continue
 		var p := camera.unproject_position(world_point)
 		var is_hero := unit is Hero
-		var width := 112.0 if is_hero else 84.0
-		var height := 13.0 if is_hero else 10.0
+		var width := 84.0
+		var height := 10.0
+		if is_hero:
+			width = 112.0
+			height = 13.0
+		elif unit is Structure:
+			width = 140.0
+			height = 14.0
+		elif unit is Minion:
+			width = 46.0
+			height = 6.0
 		var rect := Rect2(p - Vector2(width * 0.5, height), Vector2(width, height))
 		var ratio := unit.hp_ratio()
 		var key := unit.get_instance_id()
@@ -45,11 +54,13 @@ func _draw() -> void:
 
 		var fill := Color(0.35, 0.9, 0.4)
 		if unit != local_hero:
-			fill = Color(0.3, 0.75, 1.0) if unit.team == local_team else Color(0.95, 0.28, 0.25)
+			fill = Color(0.3, 0.75, 1.0) if unit.team == local_team else TeamPalette.color(unit.team)
+		if unit.is_protected():
+			fill = fill.lerp(Color(0.6, 0.6, 0.65), 0.6)
 		draw_rect(rect.grow(2.0), Color(0, 0, 0, 0.7))
 		draw_rect(Rect2(rect.position, Vector2(width * lag, height)), Color(1.0, 0.95, 0.8, 0.9))
 		draw_rect(Rect2(rect.position, Vector2(width * ratio, height)), fill)
-		var ticks := int(unit.max_hp / SEGMENT_HP)
+		var ticks := int(unit.max_hp / SEGMENT_HP) if is_hero else 0
 		for i in range(1, ticks + 1):
 			var x := rect.position.x + width * (float(i) * SEGMENT_HP / unit.max_hp)
 			if x < rect.end.x - 1.0:

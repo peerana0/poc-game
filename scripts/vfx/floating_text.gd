@@ -10,8 +10,15 @@ const COLORS := {
 }
 
 
-static func spawn(at: Node3D, amount: float, kind: String) -> void:
+## When set (the local hero in a match), only numbers involving it are shown,
+## so dozens of minion fights don't flood the screen.
+static var focus: Node = null
+
+
+static func spawn(at: Node3D, amount: float, kind: String, source: Node = null) -> void:
 	if not at.is_inside_tree():
+		return
+	if focus != null and is_instance_valid(focus) and at != focus and source != focus:
 		return
 	var scene := at.get_tree().current_scene
 	if scene == null:

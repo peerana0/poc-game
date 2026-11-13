@@ -18,12 +18,21 @@ var attack_held := false
 var cooldown_scale := 1.0
 var camera_rig: MobaCamera
 var facing := Vector3.FORWARD
+## Colour of the ring under the hero (cyan marks the local player).
+var ring_color := Color(0.3, 0.85, 1.0, 0.9)
+## Optional robe colour for the placeholder model (alpha 0 = hero's own colours).
+var model_tint := Color(0.0, 0.0, 0.0, 0.0)
+## Where the hero comes back after dying.
+var home_position := Vector3.ZERO
+var can_respawn := true
+var respawn_left := 0.0
 
 var _model: Node3D
 var _attack_cooldown := 0.0
 var _anim_time := 0.0
 var _cast_pulse := 0.0
 var _orb_light: OmniLight3D
+var _ring: MeshInstance3D
 
 
 func _ready() -> void:
@@ -44,9 +53,9 @@ func _ready() -> void:
 	_model.rotation.y = atan2(facing.x, facing.z)
 	if _model.has_meta("orb_light"):
 		_orb_light = _model.get_meta("orb_light") as OmniLight3D
-	var ring := Vfx.marker(Color(0.3, 0.85, 1.0, 0.9), 0, 0.07, 0.06, 1.4, Vector2(1.7, 1.7))
-	ring.position = Vector3(0.0, 0.04, 0.0)
-	add_child(ring)
+	_ring = Vfx.marker(ring_color, 0, 0.07, 0.06, 1.4, Vector2(1.7, 1.7))
+	_ring.position = Vector3(0.0, 0.04, 0.0)
+	add_child(_ring)
 
 
 func _make_model() -> Node3D:
@@ -54,7 +63,7 @@ func _make_model() -> Node3D:
 		return stats.model_scene.instantiate() as Node3D
 	var hero_id := stats.hero_id if stats != null else ""
 	var accent := stats.accent if stats != null else Color.WHITE
-	return HeroModels.build(hero_id, accent)
+	return HeroModels.build(hero_id, accent, model_tint)
 
 
 # --- Movement and auto attack ---------------------------------------------
@@ -65,6 +74,10 @@ func _unit_physics(delta: float) -> void:
 	_attack_cooldown = maxf(_attack_cooldown - delta, 0.0)
 	if not is_alive():
 		velocity = Vector3.ZERO
+		if can_respawn and respawn_left > 0.0:
+			respawn_left -= delta
+			if respawn_left <= 0.0:
+				_respawn()
 		return
 	var dir := Vector3(move_input.x, 0.0, move_input.y)
 	if dir.length() > 1.0:
@@ -153,6 +166,41 @@ func try_cast(index: int, target_point: Vector3) -> bool:
 	return true
 
 
+# --- Death and respawn ------------------------------------------------------
+
+## Called by the match rules when the hero dies.
+func respawn_after(seconds: float) -> void:
+	if can_respawn:
+		respawn_left = maxf(seconds, 0.5)
+
+
+func _on_died() -> void:
+	attack_held = false
+	move_input = Vector2.ZERO
+	Vfx.burst(world(), global_position + Vector3(0.0, 0.8, 0.0), Vfx.smoke(0.8))
+	Vfx.burst(world(), global_position + Vector3(0.0, 0.8, 0.0), Vfx.sparks(0.6))
+	_model.visible = false
+	_ring.visible = false
+	var body := get_node("Body") as CollisionShape3D
+	body.set_deferred("disabled", true)
+
+
+func _respawn() -> void:
+	respawn_left = 0.0
+	hp = max_hp
+	global_position = home_position
+	velocity = Vector3.ZERO
+	_model.visible = true
+	_ring.visible = true
+	var body := get_node("Body") as CollisionShape3D
+	body.set_deferred("disabled", false)
+	Vfx.burst(world(), global_position + Vector3(0.0, 0.3, 0.0), Vfx.particles({
+		"amount": 40, "lifetime": 0.9, "one_shot": true, "explosiveness": 0.8, "ring": 1.0,
+		"direction": Vector3.UP, "spread": 5.0, "vel_min": 2.0, "vel_max": 4.0, "size": 0.35,
+		"colors": Vfx.trail_colors(ring_color),
+	}))
+
+
 func notify_skill_hit(target: Unit) -> void:
 	if passive != null:
 		passive.on_skill_hit(self, target)
@@ -192,7 +240,7 @@ func nearest_enemy(max_distance: float) -> Unit:
 	var best_distance := max_distance
 	for node in get_tree().get_nodes_in_group("units"):
 		var unit := node as Unit
-		if unit == null or not unit.is_alive() or not is_enemy_of(unit):
+		if unit == null or not unit.is_alive() or not is_enemy_of(unit) or unit.is_protected():
 			continue
 		var d := unit.flat_distance_to(global_position) - unit.body_radius
 		if d <= best_distance:

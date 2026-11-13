@@ -16,6 +16,8 @@ signal damaged(amount: float, source: Node)
 @export var display_name: String = ""
 
 var hp: float = 0.0
+## Whoever dealt the most recent damage (used for kill credit).
+var last_attacker: Node
 
 var _slow_factor := 1.0
 var _slow_time := 0.0
@@ -30,6 +32,10 @@ func _ready() -> void:
 	hp = max_hp
 	motion_mode = CharacterBody3D.MOTION_MODE_FLOATING
 	add_to_group("units")
+	# Layer 1 = moving units, layer 2 = structures. Moving units only bump
+	# into structures, so crowds of heroes and minions can overlap freely.
+	collision_layer = 1
+	collision_mask = 2
 	if get_node_or_null("Body") == null:
 		var shape := CapsuleShape3D.new()
 		shape.radius = body_radius
@@ -73,16 +79,29 @@ func flat_distance_to(point: Vector3) -> float:
 
 ## Applies armour, shows a damage number and returns the damage actually dealt.
 func take_damage(amount: float, source: Node = null, kind: String = "skill") -> float:
-	if not is_alive() or amount <= 0.0:
+	if not is_alive() or amount <= 0.0 or is_protected():
 		return 0.0
 	var dealt := amount * 100.0 / (100.0 + maxf(armor, 0.0))
 	hp = maxf(hp - dealt, 0.0)
+	last_attacker = source
 	damaged.emit(dealt, source)
-	FloatingText.spawn(self, dealt, kind)
+	FloatingText.spawn(self, dealt, kind, source)
 	_on_damaged(dealt, source)
 	if hp <= 0.0:
 		_die()
 	return dealt
+
+
+## True while this unit cannot be damaged (e.g. a Core whose towers still stand).
+func is_protected() -> bool:
+	return false
+
+
+## Kills the unit outright, e.g. when its team is eliminated.
+func kill() -> void:
+	if is_alive():
+		hp = 0.0
+		_die()
 
 
 func heal(amount: float) -> void:
