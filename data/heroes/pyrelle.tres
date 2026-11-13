@@ -1,0 +1,74 @@
+[gd_resource type="Resource" script_class="HeroStats" format=3]
+
+[ext_resource type="Script" path="res://scripts/heroes/hero_stats.gd" id="1_stats"]
+[ext_resource type="Script" path="res://scripts/heroes/passives/burn_passive.gd" id="2_burn"]
+[ext_resource type="Script" path="res://scripts/heroes/pyrelle/fireball_skill.gd" id="3_fireball"]
+[ext_resource type="Script" path="res://scripts/heroes/pyrelle/fire_wall_skill.gd" id="4_wall"]
+[ext_resource type="Script" path="res://scripts/heroes/pyrelle/meteor_skill.gd" id="5_meteor"]
+
+[sub_resource type="Resource" id="Resource_burn"]
+script = ExtResource("2_burn")
+display_name = "ติดไฟ"
+description = "ทุกสกิลเผาเป้า 3% ของเลือดสูงสุดใน 3 วินาที"
+percent_max_hp = 0.03
+duration = 3.0
+
+[sub_resource type="Resource" id="Resource_fireball"]
+script = ExtResource("3_fireball")
+display_name = "ลูกไฟ"
+short_label = "ลูกไฟ"
+description = "ยิงลูกไฟระเบิดเป็นวงเมื่อโดนศัตรูตัวแรก"
+cooldown = 5.0
+cast_range = 10.0
+aim_type = 0
+line_width = 1.2
+accent = Color(1, 0.5, 0.12, 1)
+damage = 220.0
+explosion_radius = 2.5
+projectile_speed = 18.0
+
+[sub_resource type="Resource" id="Resource_wall"]
+script = ExtResource("4_wall")
+display_name = "กำแพงเพลิง"
+short_label = "กำแพงไฟ"
+description = "กำแพงไฟยาว 6 เมตร ศัตรูที่เดินผ่านช้าลงและติดไฟ"
+cooldown = 12.0
+cast_range = 8.0
+aim_type = 1
+indicator_size = Vector2(6, 1.2)
+accent = Color(1, 0.32, 0.08, 1)
+wall_length = 6.0
+duration = 4.0
+tick_damage = 40.0
+tick_interval = 0.5
+slow_multiplier = 0.7
+
+[sub_resource type="Resource" id="Resource_meteor"]
+script = ExtResource("5_meteor")
+display_name = "อุกกาบาต"
+short_label = "อุกกาบาต"
+description = "หน่วง 1 วินาที แล้วอุกกาบาตตกใส่จุดที่เลือก"
+cooldown = 60.0
+cast_range = 9.0
+aim_type = 1
+area_radius = 3.5
+accent = Color(1, 0.7, 0.2, 1)
+is_ultimate = true
+damage = 480.0
+impact_radius = 3.5
+warning_time = 1.0
+
+[resource]
+script = ExtResource("1_stats")
+hero_id = "pyrelle"
+display_name = "Pyrelle"
+role = "เวท"
+accent = Color(1, 0.45, 0.1, 1)
+max_hp = 2100.0
+armor = 50.0
+move_speed = 5.0
+attack_damage = 70.0
+attack_range = 7.0
+attacks_per_second = 0.9
+passive = SubResource("Resource_burn")
+skills = [SubResource("Resource_fireball"), SubResource("Resource_wall"), SubResource("Resource_meteor")]
